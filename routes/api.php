@@ -12,6 +12,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StatsController;
 use App\Http\Controllers\TagController;
+use App\Http\Controllers\ChatController;
 
 // API Documentation
 Route::get('/', function () {
@@ -284,6 +285,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/threads/{thread}/vote', [VoteController::class, 'voteOnThread']);
     Route::post('/comments/{comment}/vote', [VoteController::class, 'voteOnComment']);
     Route::post('/reviews/{review}/vote', [VoteController::class, 'voteOnReview']);
+
+    // Chat Routes
+    Route::post('/chat/create-room', [ChatController::class, 'createRoom']);
+    Route::post('/chat/send', [ChatController::class, 'send']);
 });
 
 // Public Routes (read-only, no authentication required)

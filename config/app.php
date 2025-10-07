@@ -1,6 +1,13 @@
 <?php
 
+use Illuminate\Support\ServiceProvider;
+
 return [
+
+    'providers' => ServiceProvider::defaultProviders()->merge([
+        /* ... other providers ... */
+        App\Providers\BroadcastServiceProvider::class, // <-- MUST BE HERE
+    ])->toArray(),
 
     /*
     |--------------------------------------------------------------------------
