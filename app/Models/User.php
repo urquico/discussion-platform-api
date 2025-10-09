@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -103,6 +104,16 @@ class User extends Authenticatable
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class, 'author', 'name');
+    }
+
+    /**
+     * Get the chat rooms the user belongs to.
+     */
+    public function chatRooms(): BelongsToMany
+    {
+        return $this->belongsToMany(ChatRoom::class, 'chat_room_users')
+                    ->withPivot('role', 'is_active', 'joined_at')
+                    ->withTimestamps();
     }
 
     /**

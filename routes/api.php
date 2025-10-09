@@ -12,6 +12,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StatsController;
 use App\Http\Controllers\TagController;
+use App\Http\Controllers\ChatRoomController;
+use App\Http\Controllers\UserController;
 
 // API Documentation
 Route::get('/', function () {
@@ -81,6 +83,17 @@ Route::get('/', function () {
             'tags' => [
                 'GET /tags/popular' => 'Popular tags',
                 'POST /tags/reindex' => 'Rebuild search index [AUTH]'
+            ],
+            'chat-rooms' => [
+                'GET /chat-rooms' => 'Get user chat rooms (?per_page=15&search=name) [AUTH]',
+                'POST /chat-rooms' => 'Create new chat room [AUTH]',
+                'GET /chat-rooms/{id}' => 'Get chat room details [AUTH]',
+                'POST /chat-rooms/{id}/users' => 'Add users to chat room [AUTH]'
+            ],
+            'users' => [
+                'GET /users/available' => 'Get available users for conversations (?per_page=20&search=name) [AUTH]',
+                'GET /users/suggestions' => 'Get user suggestions for conversations (?limit=10) [AUTH]',
+                'GET /users/search' => 'Search users by name or email (?q=search_term&limit=20) [AUTH]'
             ]
         ],
         'sample_requests' => [
@@ -229,6 +242,42 @@ Route::get('/', function () {
                         'type' => 'upvote'
                     ]
                 ]
+            ],
+            'chat-rooms' => [
+                'create' => [
+                    'url' => 'POST /api/chat-rooms',
+                    'headers' => ['Authorization' => 'Bearer {token}'],
+                    'body' => [
+                        'name' => 'Trading Discussion Group',
+                        'description' => 'A group for discussing trading strategies and protocols',
+                        'type' => 'private',
+                        'user_ids' => [2, 3, 4]
+                    ]
+                ],
+                'add_users' => [
+                    'url' => 'POST /api/chat-rooms/{id}/users',
+                    'headers' => ['Authorization' => 'Bearer {token}'],
+                    'body' => [
+                        'user_ids' => [5, 6]
+                    ]
+                ]
+            ],
+            'users' => [
+                'available_users' => [
+                    'url' => 'GET /api/users/available?per_page=20&search=alice',
+                    'headers' => ['Authorization' => 'Bearer {token}'],
+                    'description' => 'Get paginated list of users available for conversations, excluding current user'
+                ],
+                'user_suggestions' => [
+                    'url' => 'GET /api/users/suggestions?limit=10',
+                    'headers' => ['Authorization' => 'Bearer {token}'],
+                    'description' => 'Get suggested users for starting conversations'
+                ],
+                'search_users' => [
+                    'url' => 'GET /api/users/search?q=john&limit=20',
+                    'headers' => ['Authorization' => 'Bearer {token}'],
+                    'description' => 'Search users by name or email'
+                ]
             ]
         ],
         'features' => [
@@ -284,6 +333,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/threads/{thread}/vote', [VoteController::class, 'voteOnThread']);
     Route::post('/comments/{comment}/vote', [VoteController::class, 'voteOnComment']);
     Route::post('/reviews/{review}/vote', [VoteController::class, 'voteOnReview']);
+
+    // Chat Room Routes
+    Route::get('/chat-rooms', [ChatRoomController::class, 'getUserChatRooms']);
+    Route::post('/chat-rooms', [ChatRoomController::class, 'createChatRoom']);
+    Route::get('/chat-rooms/{id}', [ChatRoomController::class, 'getChatRoomDetails']);
+    Route::post('/chat-rooms/{id}/users', [ChatRoomController::class, 'addUsers']);
+
+    // User Routes
+    Route::get('/users/available', [UserController::class, 'getAvailableUsers']);
+    Route::get('/users/suggestions', [UserController::class, 'getUserSuggestions']);
+    Route::get('/users/search', [UserController::class, 'searchUsers']);
 });
 
 // Public Routes (read-only, no authentication required)
