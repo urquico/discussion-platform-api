@@ -26,9 +26,10 @@ class ChatRoomController extends Controller
         try {
             $perPage = $request->get('per_page', 15);
             $search = $request->get('search');
+            $type = $request->get('type', 'all'); // all, private, group
             $user = Auth::user();
 
-            $result = $this->chatRoomService->getUserChatRooms($user, $perPage, $search);
+            $result = $this->chatRoomService->getUserChatRooms($user, $perPage, $search, $type);
 
             return ApiResponse::successWithPagination(
                 $result['data'],

@@ -18,7 +18,6 @@ class ChatRoomDTO
         public readonly string $updated_at,
         public readonly ?UserDTO $creator = null,
         public readonly ?array $users = null,
-        public readonly ?array $messages = null,
         public readonly ?int $unread_count = null,
         public readonly ?string $last_message = null,
         public readonly ?string $last_message_at = null,
@@ -88,7 +87,6 @@ class ChatRoomDTO
                 ? UserDTO::fromModel($chatRoom->creator) 
                 : null,
             users: $users,
-            messages: $messages,
             last_message: $lastMessage,
             last_message_at: $lastMessageAt,
             other_user: $otherUser,
@@ -108,7 +106,6 @@ class ChatRoomDTO
             'updated_at' => $this->updated_at,
             'creator' => $this->creator?->toArray(),
             'users' => $this->users,
-            'messages' => $this->messages,
             'unread_count' => $this->unread_count,
             'last_message' => $this->last_message,
             'last_message_at' => $this->last_message_at,

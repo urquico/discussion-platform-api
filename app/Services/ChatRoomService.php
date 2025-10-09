@@ -35,9 +35,10 @@ class ChatRoomService
      * @param User $user
      * @param int $perPage
      * @param string|null $search
+     * @param string $type
      * @return array
      */
-    public function getUserChatRooms(User $user, int $perPage = 15, ?string $search = null): array
+    public function getUserChatRooms(User $user, int $perPage = 15, ?string $search = null, string $type = 'all'): array
     {
         $query = $user->chatRooms()
             ->with([
@@ -50,6 +51,11 @@ class ChatRoomService
                 }
             ])
             ->wherePivot('is_active', true);
+
+        // Add type filter
+        if ($type !== 'all') {
+            $query->where('chat_rooms.type', $type);
+        }
 
         // Add search functionality if provided
         if ($search) {
@@ -142,9 +148,6 @@ class ChatRoomService
             'users' => function ($query) {
                 $query->wherePivot('is_active', true);
             },
-            'messages' => function ($query) {
-                $query->with(['sender', 'receiver'])->latest()->limit(50);
-            }
         ])->find($chatRoomId);
 
         if (!$chatRoom) {

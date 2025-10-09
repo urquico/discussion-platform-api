@@ -86,7 +86,7 @@ Route::get('/', function () {
                 'POST /tags/reindex' => 'Rebuild search index [AUTH]'
             ],
             'chat-rooms' => [
-                'GET /chat-rooms' => 'Get user chat rooms (?per_page=15&search=name) [AUTH]',
+                'GET /chat-rooms' => 'Get user chat rooms (?per_page=15&search=name&type=all|private|group) [AUTH]',
                 'POST /chat-rooms' => 'Create new chat room [AUTH]',
                 'GET /chat-rooms/{id}' => 'Get chat room details [AUTH]',
                 'POST /chat-rooms/{id}/users' => 'Add users to chat room [AUTH]',
