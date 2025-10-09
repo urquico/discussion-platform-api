@@ -190,4 +190,63 @@ class UserController extends Controller
             )->toJsonResponse();
         }
     }
+
+    /**
+     * Get all users for group chat creation.
+     * Excludes the currently logged-in user.
+     * Includes pagination and search functionality.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getAllUsersForGroupChat(Request $request): JsonResponse
+    {
+        try {
+            $currentUser = Auth::user();
+            $perPage = $request->get('per_page', 20);
+            $search = $request->get('search');
+
+            // Validate sort parameters
+            $allowedSortFields = ['name', 'created_at', 'email'];
+            $allowedSortOrders = ['asc', 'desc'];
+        
+            // Build query to exclude current user
+            $query = User::where('id', '!=', $currentUser->id);
+
+            // Add search functionality if provided
+            if ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                });
+            }
+
+            // Paginate results
+            $users = $query->paginate($perPage);
+
+            // Convert to DTOs
+            $userDTOs = $users->map(function (User $user) {
+                return UserDTO::fromModel($user);
+            });
+
+            return ApiResponse::successWithPagination(
+                $userDTOs,
+                [
+                    'current_page' => $users->currentPage(),
+                    'per_page' => $users->perPage(),
+                    'total' => $users->total(),
+                    'last_page' => $users->lastPage(),
+                    'from' => $users->firstItem(),
+                    'to' => $users->lastItem(),
+                ],
+                'Users for group chat retrieved successfully'
+            )->toJsonResponse();
+
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Failed to retrieve users for group chat: ' . $e->getMessage(),
+                500
+            )->toJsonResponse();
+        }
+    }
 }

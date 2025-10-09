@@ -1,7 +1,22 @@
 <?php
 
 use Illuminate\Support\Facades\Broadcast;
+use App\Models\ChatRoom;
 
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
+});
+
+Broadcast::channel('chat-room.{chatRoomId}', function ($user, $chatRoomId) {
+    // Check if user is a member of the chat room
+    $chatRoom = ChatRoom::find($chatRoomId);
+    
+    if (!$chatRoom) {
+        return false;
+    }
+    
+    return $chatRoom->users()
+        ->wherePivot('user_id', $user->id)
+        ->wherePivot('is_active', true)
+        ->exists();
 });

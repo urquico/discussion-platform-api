@@ -13,6 +13,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StatsController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\ChatRoomController;
+use App\Http\Controllers\ChatMessageController;
 use App\Http\Controllers\UserController;
 
 // API Documentation
@@ -88,12 +89,17 @@ Route::get('/', function () {
                 'GET /chat-rooms' => 'Get user chat rooms (?per_page=15&search=name) [AUTH]',
                 'POST /chat-rooms' => 'Create new chat room [AUTH]',
                 'GET /chat-rooms/{id}' => 'Get chat room details [AUTH]',
-                'POST /chat-rooms/{id}/users' => 'Add users to chat room [AUTH]'
+                'POST /chat-rooms/{id}/users' => 'Add users to chat room [AUTH]',
+                'POST /chat-rooms/{chatRoomId}/messages' => 'Send message to chat room [AUTH]',
+                'GET /chat-rooms/{chatRoomId}/messages' => 'Get chat room messages (?per_page=50) [AUTH]',
+                'PUT /messages/{messageId}' => 'Edit message [AUTH]',
+                'DELETE /messages/{messageId}' => 'Delete message [AUTH]'
             ],
             'users' => [
                 'GET /users/available' => 'Get available users for conversations (?per_page=20&search=name) [AUTH]',
                 'GET /users/suggestions' => 'Get user suggestions for conversations (?limit=10) [AUTH]',
-                'GET /users/search' => 'Search users by name or email (?q=search_term&limit=20) [AUTH]'
+                'GET /users/search' => 'Search users by name or email (?q=search_term&limit=20) [AUTH]',
+                'GET /users/group-chat' => 'Get all users for group chat creation (?per_page=20&search=name&sort_by=name&sort_order=asc) [AUTH]'
             ]
         ],
         'sample_requests' => [
@@ -340,10 +346,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/chat-rooms/{id}', [ChatRoomController::class, 'getChatRoomDetails']);
     Route::post('/chat-rooms/{id}/users', [ChatRoomController::class, 'addUsers']);
 
+    // Chat Message Routes
+    Route::post('/chat-rooms/{chatRoomId}/messages', [ChatMessageController::class, 'sendMessage']);
+    Route::get('/chat-rooms/{chatRoomId}/messages', [ChatMessageController::class, 'getMessages']);
+    Route::put('/messages/{messageId}', [ChatMessageController::class, 'editMessage']);
+    Route::delete('/messages/{messageId}', [ChatMessageController::class, 'deleteMessage']);
+
     // User Routes
     Route::get('/users/available', [UserController::class, 'getAvailableUsers']);
     Route::get('/users/suggestions', [UserController::class, 'getUserSuggestions']);
     Route::get('/users/search', [UserController::class, 'searchUsers']);
+    Route::get('/users/group-chat', [UserController::class, 'getAllUsersForGroupChat']);
 });
 
 // Public Routes (read-only, no authentication required)

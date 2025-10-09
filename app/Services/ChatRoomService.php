@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ChatRoom;
 use App\Models\User;
+use App\Models\ChatMessage;
 use App\DTOs\ChatRoomDTO;
 use Illuminate\Support\Facades\DB;
 
@@ -209,5 +210,168 @@ class ChatRoomService
         $chatRoom->load(['creator', 'users']);
 
         return ChatRoomDTO::fromModel($chatRoom, $user);
+    }
+
+    /**
+     * Send a message to a chat room.
+     *
+     * @param int $chatRoomId
+     * @param User $user
+     * @param array $data
+     * @return ChatMessage
+     * @throws \Exception When not authorized or chat room not found
+     */
+    public function sendMessage(int $chatRoomId, User $user, array $data): ChatMessage
+    {
+        $chatRoom = ChatRoom::find($chatRoomId);
+
+        if (!$chatRoom) {
+            throw new \Exception('Chat room not found.');
+        }
+
+        // Check if user is a member of this chat room
+        $isMember = $chatRoom->users()
+            ->wherePivot('user_id', $user->id)
+            ->wherePivot('is_active', true)
+            ->exists();
+
+        if (!$isMember) {
+            throw new \Exception('You are not authorized to send messages to this chat room.');
+        }
+
+        // Create the message
+        $message = ChatMessage::create([
+            'sender_id' => $user->id,
+            'chat_room_id' => $chatRoomId,
+            'message' => $data['message'],
+            'message_type' => $data['message_type'] ?? 'text',
+            'reply_to_message_id' => $data['reply_to_message_id'] ?? null,
+        ]);
+
+        // Load the sender relationship
+        $message->load('sender');
+
+        return $message;
+    }
+
+    /**
+     * Get messages for a chat room.
+     *
+     * @param int $chatRoomId
+     * @param User $user
+     * @param int $perPage
+     * @return array
+     * @throws \Exception When not authorized or chat room not found
+     */
+    public function getChatRoomMessages(int $chatRoomId, User $user, int $perPage = 50): array
+    {
+        $chatRoom = ChatRoom::find($chatRoomId);
+
+        if (!$chatRoom) {
+            throw new \Exception('Chat room not found.');
+        }
+
+        // Check if user is a member of this chat room
+        $isMember = $chatRoom->users()
+            ->wherePivot('user_id', $user->id)
+            ->wherePivot('is_active', true)
+            ->exists();
+
+        if (!$isMember) {
+            throw new \Exception('You are not authorized to view messages in this chat room.');
+        }
+
+        $messages = ChatMessage::where('chat_room_id', $chatRoomId)
+            ->with(['sender', 'replyTo.sender'])
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+
+        return [
+            'data' => $messages->items(),
+            'pagination' => [
+                'current_page' => $messages->currentPage(),
+                'per_page' => $messages->perPage(),
+                'total' => $messages->total(),
+                'last_page' => $messages->lastPage(),
+                'from' => $messages->firstItem(),
+                'to' => $messages->lastItem(),
+            ]
+        ];
+    }
+
+    /**
+     * Edit a message.
+     *
+     * @param int $messageId
+     * @param User $user
+     * @param string $newMessage
+     * @return ChatMessage
+     * @throws \Exception When not authorized or message not found
+     */
+    public function editMessage(int $messageId, User $user, string $newMessage): ChatMessage
+    {
+        $message = ChatMessage::find($messageId);
+
+        if (!$message) {
+            throw new \Exception('Message not found.');
+        }
+
+        // Check if user is the sender of the message
+        if ($message->sender_id !== $user->id) {
+            throw new \Exception('You are not authorized to edit this message.');
+        }
+
+        // Update the message
+        $message->update([
+            'message' => $newMessage,
+            'is_edited' => true,
+            'edited_at' => now(),
+        ]);
+
+        // Load the sender relationship
+        $message->load('sender');
+
+        return $message;
+    }
+
+    /**
+     * Delete a message.
+     *
+     * @param int $messageId
+     * @param User $user
+     * @return ChatMessage
+     * @throws \Exception When not authorized or message not found
+     */
+    public function deleteMessage(int $messageId, User $user): ChatMessage
+    {
+        $message = ChatMessage::find($messageId);
+
+        if (!$message) {
+            throw new \Exception('Message not found.');
+        }
+
+        // Check if user is the sender of the message or admin of the chat room
+        $isSender = $message->sender_id === $user->id;
+        $isAdmin = $message->chatRoom->users()
+            ->wherePivot('user_id', $user->id)
+            ->wherePivot('is_active', true)
+            ->wherePivot('role', 'admin')
+            ->exists();
+
+        if (!$isSender && !$isAdmin) {
+            throw new \Exception('You are not authorized to delete this message.');
+        }
+
+        // Soft delete the message by updating its content
+        $message->update([
+            'message' => '[Message deleted]',
+            'is_edited' => true,
+            'edited_at' => now(),
+        ]);
+
+        // Load the sender relationship
+        $message->load('sender');
+
+        return $message;
     }
 }
