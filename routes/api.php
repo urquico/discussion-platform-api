@@ -101,6 +101,13 @@ Route::get('/', function () {
                 'GET /users/suggestions' => 'Get user suggestions for conversations (?limit=10) [AUTH]',
                 'GET /users/search' => 'Search users by name or email (?q=search_term&limit=20) [AUTH]',
                 'GET /users/group-chat' => 'Get all users for group chat creation (?per_page=20&search=name&sort_by=name&sort_order=asc) [AUTH]'
+            ],
+            'user-status' => [
+                'POST /users/status' => 'Set current user status (online, offline, away, busy) [AUTH]',
+                'GET /users/status' => 'Get current user status [AUTH]',
+                'GET /users/{userId}/status' => 'Check specific user online status [AUTH]',
+                'GET /users/online' => 'Get all online users [AUTH]',
+                'GET /chat-rooms/{chatRoomId}/users/online' => 'Get online users for specific chat room [AUTH]'
             ]
         ],
         'sample_requests' => [
@@ -290,6 +297,36 @@ Route::get('/', function () {
                     'headers' => ['Authorization' => 'Bearer {token}'],
                     'description' => 'Search users by name or email'
                 ]
+            ],
+            'user-status' => [
+                'set_status' => [
+                    'url' => 'POST /api/users/status',
+                    'headers' => ['Authorization' => 'Bearer {token}'],
+                    'body' => [
+                        'status' => 'online'
+                    ],
+                    'description' => 'Set user status (online, offline, away, busy)'
+                ],
+                'get_current_status' => [
+                    'url' => 'GET /api/users/status',
+                    'headers' => ['Authorization' => 'Bearer {token}'],
+                    'description' => 'Get current user status'
+                ],
+                'check_user_status' => [
+                    'url' => 'GET /api/users/123/status',
+                    'headers' => ['Authorization' => 'Bearer {token}'],
+                    'description' => 'Check specific user online status'
+                ],
+                'get_online_users' => [
+                    'url' => 'GET /api/users/online',
+                    'headers' => ['Authorization' => 'Bearer {token}'],
+                    'description' => 'Get all online users'
+                ],
+                'get_chat_room_online_users' => [
+                    'url' => 'GET /api/chat-rooms/1/users/online',
+                    'headers' => ['Authorization' => 'Bearer {token}'],
+                    'description' => 'Get online users for specific chat room'
+                ]
             ]
         ],
         'features' => [
@@ -299,7 +336,10 @@ Route::get('/', function () {
             'smart_highlighting' => 'Highlighted comments/replies automatically included even if on different pages',
             'deep_linking' => 'Use ?highlight_comment=id or ?highlight_reply=id for smart highlighting',
             'service_architecture' => 'Clean separation with ProfileService handling business logic',
-            'profile_content' => 'Get user comments and replies separately with /profile/comments and /profile/replies'
+            'profile_content' => 'Get user comments and replies separately with /profile/comments and /profile/replies',
+            'realtime_chat' => 'WebSocket-based real-time messaging with typing indicators and online status',
+            'online_status' => 'Real-time online/offline indicators with automatic activity tracking',
+            'user_presence' => 'Track user activity and broadcast status changes to relevant chat rooms'
         ]
     ]);
 });
@@ -379,6 +419,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/suggestions', [UserController::class, 'getUserSuggestions']);
     Route::get('/users/search', [UserController::class, 'searchUsers']);
     Route::get('/users/group-chat', [UserController::class, 'getAllUsersForGroupChat']);
+    
+    // User Status Routes
+    Route::post('/users/status', [UserController::class, 'setStatus']);
+    Route::get('/users/status', [UserController::class, 'getCurrentUserStatus']);
+    Route::get('/users/{userId}/status', [UserController::class, 'checkUserOnlineStatus']);
+    Route::get('/users/online', [UserController::class, 'getAllOnlineUsers']);
+    Route::get('/chat-rooms/{chatRoomId}/users/online', [UserController::class, 'getOnlineUsersForChatRoom']);
 });
 
 // Public Routes (read-only, no authentication required)

@@ -11,26 +11,29 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class TypingIndicator implements ShouldBroadcast
+class UserStatusChanged implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $user;
-    public $chatRoomId;
-    public $isTyping;
+    public $status;
+    public $isOnline;
+    public $lastSeenAt;
 
     /**
      * Create a new event instance.
      *
      * @param User $user
-     * @param int $chatRoomId
-     * @param bool $isTyping
+     * @param string $status
+     * @param bool $isOnline
+     * @param string|null $lastSeenAt
      */
-    public function __construct(User $user, int $chatRoomId, bool $isTyping = true)
+    public function __construct(User $user, string $status, bool $isOnline, ?string $lastSeenAt = null)
     {
         $this->user = $user;
-        $this->chatRoomId = $chatRoomId;
-        $this->isTyping = $isTyping;
+        $this->status = $status;
+        $this->isOnline = $isOnline;
+        $this->lastSeenAt = $lastSeenAt;
     }
 
     /**
@@ -40,9 +43,22 @@ class TypingIndicator implements ShouldBroadcast
      */
     public function broadcastOn(): array
     {
-        return [
-            new PrivateChannel('chat-room.' . $this->chatRoomId),
-        ];
+        // Broadcast to all chat rooms where this user is a member
+        $channels = [];
+        
+        $chatRoomIds = $this->user->chatRooms()
+            ->wherePivot('is_active', true)
+            ->pluck('chat_rooms.id')
+            ->toArray();
+        
+        foreach ($chatRoomIds as $chatRoomId) {
+            $channels[] = new PrivateChannel('chat-room.' . $chatRoomId);
+        }
+        
+        // Also broadcast to a general user status channel for friends/contacts
+        $channels[] = new PrivateChannel('user-status');
+        
+        return $channels;
     }
 
     /**
@@ -56,12 +72,10 @@ class TypingIndicator implements ShouldBroadcast
             'user' => [
                 'id' => $this->user->id,
                 'name' => $this->user->name,
-                'online_status' => $this->user->online_status,
-                'is_online' => $this->user->is_online,
-                'status' => $this->user->status,
             ],
-            'chat_room_id' => $this->chatRoomId,
-            'is_typing' => $this->isTyping,
+            'status' => $this->status,
+            'is_online' => $this->isOnline,
+            'last_seen_at' => $this->lastSeenAt,
             'timestamp' => now()->toISOString(),
         ];
     }
@@ -73,6 +87,6 @@ class TypingIndicator implements ShouldBroadcast
      */
     public function broadcastAs(): string
     {
-        return 'typing.indicator';
+        return 'user.status.changed';
     }
 }

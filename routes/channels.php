@@ -20,3 +20,8 @@ Broadcast::channel('chat-room.{chatRoomId}', function ($user, $chatRoomId) {
         ->wherePivot('is_active', true)
         ->exists();
 });
+
+Broadcast::channel('user-status', function ($user) {
+    // Allow all authenticated users to listen to user status changes
+    return true;
+});

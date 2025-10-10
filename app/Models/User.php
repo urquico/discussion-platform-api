@@ -38,6 +38,9 @@ class User extends Authenticatable
         'password',
         'email_verified_at',
         'is_admin',
+        'last_seen_at',
+        'is_online',
+        'status',
     ];
 
     /**
@@ -55,6 +58,8 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'is_admin' => 'boolean',
+        'last_seen_at' => 'datetime',
+        'is_online' => 'boolean',
     ];
 
 
@@ -169,5 +174,99 @@ class User extends Authenticatable
         return $this->forceFill([
             'email_verified_at' => $this->freshTimestamp(),
         ])->save();
+    }
+
+    /**
+     * Mark the user as online.
+     */
+    public function markAsOnline(): bool
+    {
+        return $this->update([
+            'is_online' => true,
+            'status' => 'online',
+            'last_seen_at' => now(),
+        ]);
+    }
+
+    /**
+     * Mark the user as offline.
+     */
+    public function markAsOffline(): bool
+    {
+        return $this->update([
+            'is_online' => false,
+            'status' => 'offline',
+            'last_seen_at' => now(),
+        ]);
+    }
+
+    /**
+     * Update the user's last seen timestamp.
+     */
+    public function updateLastSeen(): bool
+    {
+        return $this->update([
+            'last_seen_at' => now(),
+        ]);
+    }
+
+    /**
+     * Set the user's status (online, offline, away, busy).
+     */
+    public function setStatus(string $status): bool
+    {
+        $validStatuses = ['online', 'offline', 'away', 'busy'];
+        
+        if (!in_array($status, $validStatuses)) {
+            return false;
+        }
+
+        $updateData = ['status' => $status];
+        
+        if ($status === 'online') {
+            $updateData['is_online'] = true;
+            $updateData['last_seen_at'] = now();
+        } elseif ($status === 'offline') {
+            $updateData['is_online'] = false;
+            $updateData['last_seen_at'] = now();
+        }
+
+        return $this->update($updateData);
+    }
+
+    /**
+     * Check if the user is currently online.
+     */
+    public function isOnline(): bool
+    {
+        return $this->is_online && $this->status === 'online';
+    }
+
+    /**
+     * Check if the user was recently active (within last 5 minutes).
+     */
+    public function isRecentlyActive(): bool
+    {
+        if (!$this->last_seen_at) {
+            return false;
+        }
+
+        return $this->last_seen_at->diffInMinutes(now()) <= 5;
+    }
+
+    /**
+     * Get the user's online status for display.
+     */
+    public function getOnlineStatusAttribute(): string
+    {
+        if ($this->isOnline()) {
+            return 'online';
+        }
+
+        if ($this->isRecentlyActive()) {
+            return 'recently_active';
+        }
+
+        return 'offline';
     }
 }

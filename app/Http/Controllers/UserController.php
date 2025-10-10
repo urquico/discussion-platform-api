@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\DTOs\ApiResponse;
 use App\DTOs\UserDTO;
+use App\Services\UserStatusService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -12,6 +13,12 @@ use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
+    protected UserStatusService $userStatusService;
+
+    public function __construct(UserStatusService $userStatusService)
+    {
+        $this->userStatusService = $userStatusService;
+    }
     /**
      * Get list of users available for conversations.
      * Excludes the currently logged-in user and users they already have chat rooms with.
@@ -245,6 +252,154 @@ class UserController extends Controller
         } catch (\Exception $e) {
             return ApiResponse::error(
                 'Failed to retrieve users for group chat: ' . $e->getMessage(),
+                500
+            )->toJsonResponse();
+        }
+    }
+
+    /**
+     * Set the current user's online status.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function setStatus(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'status' => 'required|string|in:online,offline,away,busy'
+            ]);
+
+            $user = Auth::user();
+            $status = $request->input('status');
+
+            $success = $this->userStatusService->setUserStatus($user, $status);
+
+            if ($success) {
+                return ApiResponse::success([
+                    'user_id' => $user->id,
+                    'status' => $user->fresh()->status,
+                    'is_online' => $user->fresh()->is_online,
+                    'last_seen_at' => $user->fresh()->last_seen_at,
+                ], 'User status updated successfully')->toJsonResponse();
+            }
+
+            return ApiResponse::error('Failed to update user status', 400)->toJsonResponse();
+
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Failed to update user status: ' . $e->getMessage(),
+                500
+            )->toJsonResponse();
+        }
+    }
+
+    /**
+     * Get online users for a specific chat room.
+     *
+     * @param Request $request
+     * @param int $chatRoomId
+     * @return JsonResponse
+     */
+    public function getOnlineUsersForChatRoom(Request $request, int $chatRoomId): JsonResponse
+    {
+        try {
+            $onlineUsers = $this->userStatusService->getOnlineUsersForChatRoom($chatRoomId);
+
+            return ApiResponse::success([
+                'chat_room_id' => $chatRoomId,
+                'online_users' => $onlineUsers,
+                'count' => count($onlineUsers),
+            ], 'Online users retrieved successfully')->toJsonResponse();
+
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Failed to retrieve online users: ' . $e->getMessage(),
+                500
+            )->toJsonResponse();
+        }
+    }
+
+    /**
+     * Get all online users.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getAllOnlineUsers(Request $request): JsonResponse
+    {
+        try {
+            $onlineUsers = $this->userStatusService->getAllOnlineUsers();
+
+            return ApiResponse::success([
+                'online_users' => $onlineUsers,
+                'count' => count($onlineUsers),
+            ], 'All online users retrieved successfully')->toJsonResponse();
+
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Failed to retrieve online users: ' . $e->getMessage(),
+                500
+            )->toJsonResponse();
+        }
+    }
+
+    /**
+     * Check if a specific user is online.
+     *
+     * @param Request $request
+     * @param int $userId
+     * @return JsonResponse
+     */
+    public function checkUserOnlineStatus(Request $request, int $userId): JsonResponse
+    {
+        try {
+            $user = User::find($userId);
+            
+            if (!$user) {
+                return ApiResponse::error('User not found', 404)->toJsonResponse();
+            }
+
+            $isOnline = $this->userStatusService->isUserOnline($userId);
+
+            return ApiResponse::success([
+                'user_id' => $userId,
+                'is_online' => $isOnline,
+                'status' => $user->status,
+                'last_seen_at' => $user->last_seen_at,
+                'online_status' => $user->online_status,
+            ], 'User online status retrieved successfully')->toJsonResponse();
+
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Failed to check user online status: ' . $e->getMessage(),
+                500
+            )->toJsonResponse();
+        }
+    }
+
+    /**
+     * Get current user's status.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getCurrentUserStatus(Request $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            return ApiResponse::success([
+                'user_id' => $user->id,
+                'status' => $user->status,
+                'is_online' => $user->is_online,
+                'last_seen_at' => $user->last_seen_at,
+                'online_status' => $user->online_status,
+            ], 'Current user status retrieved successfully')->toJsonResponse();
+
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Failed to retrieve current user status: ' . $e->getMessage(),
                 500
             )->toJsonResponse();
         }
