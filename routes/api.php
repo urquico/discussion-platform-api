@@ -27,7 +27,8 @@ Route::get('/', function () {
             'auth' => [
                 'POST /register' => 'Register new user',
                 'POST /login' => 'Login user',
-                'POST /logout' => 'Logout user [AUTH]'
+                'POST /logout' => 'Logout user [AUTH]',
+                'POST /broadcasting/auth' => 'Get broadcasting authentication token [AUTH]'
             ],
             'profile' => [
                 'GET /profile' => 'Get current user profile [AUTH]',
@@ -119,6 +120,11 @@ Route::get('/', function () {
                         'email' => 'john@example.com',
                         'password' => 'password123'
                     ]
+                ],
+                'broadcasting_auth' => [
+                    'url' => 'POST /api/broadcasting/auth',
+                    'headers' => ['Authorization' => 'Bearer {token}'],
+                    'description' => 'Get authentication token for WebSocket broadcasting'
                 ]
             ],
             'profile' => [
@@ -301,6 +307,18 @@ Route::get('/', function () {
 // Authentication Routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+
+// Broadcasting Authentication Route for Sanctum
+Route::middleware('auth:sanctum')->post('/broadcasting/auth', function (Illuminate\Http\Request $request) {
+    $user = $request->user();
+    
+    // Create a temporary token for broadcasting
+    $token = $user->createToken('broadcasting', ['broadcasting'])->plainTextToken;
+    
+    return response()->json([
+        'auth' => $token
+    ]);
+});
 
 // Tag Routes (public)
 Route::get('/tags/popular', [TagController::class, 'popularTags']);
