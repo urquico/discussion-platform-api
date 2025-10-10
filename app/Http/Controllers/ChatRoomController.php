@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\ChatRoomService;
 use App\DTOs\ApiResponse;
+use App\Events\ChatRoomUpdated;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -130,6 +131,9 @@ class ChatRoomController extends Controller
 
             $user = Auth::user();
             $chatRoom = $this->chatRoomService->addUsersToChatRoom($id, $user, $validated['user_ids']);
+
+            // Broadcast chat room update to all members
+            broadcast(new ChatRoomUpdated($chatRoom, 'users_added', $validated['user_ids']));
 
             return ApiResponse::success(
                 $chatRoom,

@@ -6,6 +6,7 @@ use App\Services\ChatRoomService;
 use App\DTOs\ApiResponse;
 use App\Events\MessageSent;
 use App\Events\TypingIndicator;
+use App\Events\ChatRoomUpdated;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -38,6 +39,9 @@ class ChatMessageController extends Controller
 
             // Broadcast the message to all users in the chat room
             broadcast(new MessageSent($message))->toOthers();
+            
+            // Broadcast chat room update to all members for real-time chat list updates
+            broadcast(new ChatRoomUpdated($message->chatRoom, 'message_sent'))->toOthers();
 
             return ApiResponse::success(
                 $message,
@@ -113,6 +117,9 @@ class ChatMessageController extends Controller
 
             // Broadcast the edited message
             broadcast(new MessageSent($message, 'edited'))->toOthers();
+            
+            // Broadcast chat room update
+            broadcast(new ChatRoomUpdated($message->chatRoom, 'message_edited'))->toOthers();
 
             return ApiResponse::success(
                 $message,
@@ -150,6 +157,9 @@ class ChatMessageController extends Controller
 
             // Broadcast the deleted message
             broadcast(new MessageSent($message, 'deleted'))->toOthers();
+            
+            // Broadcast chat room update
+            broadcast(new ChatRoomUpdated($message->chatRoom, 'message_deleted'))->toOthers();
 
             return ApiResponse::success(
                 ['message_id' => $messageId],
