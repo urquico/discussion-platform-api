@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\ChatRoomService;
 use App\DTOs\ApiResponse;
 use App\Events\MessageSent;
+use App\Events\TypingIndicator;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -162,6 +163,92 @@ class ChatMessageController extends Controller
             return ApiResponse::error(
                 $e->getMessage(),
                 $statusCode
+            )->toJsonResponse();
+        }
+    }
+
+    /**
+     * Start typing indicator.
+     *
+     * @param Request $request
+     * @param int $chatRoomId
+     * @return JsonResponse
+     */
+    public function startTyping(Request $request, int $chatRoomId): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            
+            // Verify user is a member of the chat room
+            $chatRoom = \App\Models\ChatRoom::find($chatRoomId);
+            if (!$chatRoom) {
+                return ApiResponse::error('Chat room not found.', 404)->toJsonResponse();
+            }
+
+            $isMember = $chatRoom->users()
+                ->wherePivot('user_id', $user->id)
+                ->wherePivot('is_active', true)
+                ->exists();
+
+            if (!$isMember) {
+                return ApiResponse::error('You are not authorized to access this chat room.', 403)->toJsonResponse();
+            }
+
+            // Broadcast typing indicator to other users
+            broadcast(new TypingIndicator($user, $chatRoomId, true))->toOthers();
+
+            return ApiResponse::success(
+                ['message' => 'Typing indicator started'],
+                'Typing indicator started successfully'
+            )->toJsonResponse();
+
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                $e->getMessage(),
+                500
+            )->toJsonResponse();
+        }
+    }
+
+    /**
+     * Stop typing indicator.
+     *
+     * @param Request $request
+     * @param int $chatRoomId
+     * @return JsonResponse
+     */
+    public function stopTyping(Request $request, int $chatRoomId): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            
+            // Verify user is a member of the chat room
+            $chatRoom = \App\Models\ChatRoom::find($chatRoomId);
+            if (!$chatRoom) {
+                return ApiResponse::error('Chat room not found.', 404)->toJsonResponse();
+            }
+
+            $isMember = $chatRoom->users()
+                ->wherePivot('user_id', $user->id)
+                ->wherePivot('is_active', true)
+                ->exists();
+
+            if (!$isMember) {
+                return ApiResponse::error('You are not authorized to access this chat room.', 403)->toJsonResponse();
+            }
+
+            // Broadcast typing indicator stop to other users
+            broadcast(new TypingIndicator($user, $chatRoomId, false))->toOthers();
+
+            return ApiResponse::success(
+                ['message' => 'Typing indicator stopped'],
+                'Typing indicator stopped successfully'
+            )->toJsonResponse();
+
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                $e->getMessage(),
+                500
             )->toJsonResponse();
         }
     }

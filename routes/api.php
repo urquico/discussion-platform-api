@@ -370,6 +370,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/messages/{messageId}', [ChatMessageController::class, 'editMessage']);
     Route::delete('/messages/{messageId}', [ChatMessageController::class, 'deleteMessage']);
 
+    // Typing Indicator Routes
+    Route::post('/chat-rooms/{chatRoomId}/typing', [ChatMessageController::class, 'startTyping']);
+    Route::delete('/chat-rooms/{chatRoomId}/typing', [ChatMessageController::class, 'stopTyping']);
+
     // User Routes
     Route::get('/users/available', [UserController::class, 'getAvailableUsers']);
     Route::get('/users/suggestions', [UserController::class, 'getUserSuggestions']);
