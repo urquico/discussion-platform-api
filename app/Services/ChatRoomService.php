@@ -69,8 +69,14 @@ class ChatRoomService
             });
         }
 
-        $chatRooms = $query->orderBy('updated_at', 'desc')
-                          ->paginate($perPage);
+        $chatRooms = $query->leftJoin('chat_messages', function ($join) {
+                                $join->on('chat_rooms.id', '=', 'chat_messages.chat_room_id')
+                                     ->whereRaw('chat_messages.id = (SELECT MAX(id) FROM chat_messages WHERE chat_room_id = chat_rooms.id)');
+                            })
+                            ->orderBy('chat_messages.updated_at', 'desc')
+                            ->orderBy('chat_rooms.updated_at', 'desc')
+                            ->select('chat_rooms.*')
+                            ->paginate($perPage);
 
         $chatRoomDTOs = $chatRooms->map(function ($chatRoom) use ($user) {
             return ChatRoomDTO::fromModel($chatRoom, $user);
