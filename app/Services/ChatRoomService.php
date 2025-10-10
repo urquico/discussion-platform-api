@@ -6,6 +6,7 @@ use App\Models\ChatRoom;
 use App\Models\User;
 use App\Models\ChatMessage;
 use App\DTOs\ChatRoomDTO;
+use App\Services\MessageEncryptionService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -29,6 +30,10 @@ use Illuminate\Support\Facades\DB;
  */
 class ChatRoomService
 {
+    public function __construct(
+        private MessageEncryptionService $encryptionService
+    ) {}
+
     /**
      * Get all chat rooms for a specific user.
      *
@@ -252,7 +257,7 @@ class ChatRoomService
         $message = ChatMessage::create([
             'sender_id' => $user->id,
             'chat_room_id' => $chatRoomId,
-            'message' => $data['message'],
+            'message' => $this->encryptionService->encryptMessage($data['message']),
             'message_type' => $data['message_type'] ?? 'text',
             'reply_to_message_id' => $data['reply_to_message_id'] ?? null,
         ]);
@@ -332,7 +337,7 @@ class ChatRoomService
 
         // Update the message
         $message->update([
-            'message' => $newMessage,
+            'message' => $this->encryptionService->encryptMessage($newMessage),
             'is_edited' => true,
             'edited_at' => now(),
         ]);
@@ -373,7 +378,7 @@ class ChatRoomService
 
         // Soft delete the message by updating its content
         $message->update([
-            'message' => '[Message deleted]',
+            'message' => $this->encryptionService->encryptMessage('[Message deleted]'),
             'is_edited' => true,
             'edited_at' => now(),
         ]);
