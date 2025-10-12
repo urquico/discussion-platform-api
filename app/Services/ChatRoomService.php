@@ -296,7 +296,7 @@ class ChatRoomService
         }
 
         $messages = ChatMessage::where('chat_room_id', $chatRoomId)
-            ->with(['sender', 'replyTo.sender', 'replies.sender'])
+            ->with(['sender', 'replyTo.sender', 'replies.sender', 'reactions.user'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 

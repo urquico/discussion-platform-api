@@ -14,6 +14,7 @@ use App\Http\Controllers\StatsController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\ChatRoomController;
 use App\Http\Controllers\ChatMessageController;
+use App\Http\Controllers\MessageReactionController;
 use App\Http\Controllers\UserController;
 
 // API Documentation
@@ -414,6 +415,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Typing Indicator Routes
     Route::post('/chat-rooms/{chatRoomId}/typing', [ChatMessageController::class, 'startTyping']);
     Route::delete('/chat-rooms/{chatRoomId}/typing', [ChatMessageController::class, 'stopTyping']);
+
+    // Message Reaction Routes
+    Route::post('/messages/{messageId}/reactions', [MessageReactionController::class, 'addReaction']);
+    Route::delete('/messages/{messageId}/reactions', [MessageReactionController::class, 'removeReaction']);
+    Route::get('/messages/{messageId}/reactions', [MessageReactionController::class, 'getReactions']);
 
     // User Routes
     Route::get('/users/available', [UserController::class, 'getAvailableUsers']);
