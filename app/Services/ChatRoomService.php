@@ -262,8 +262,8 @@ class ChatRoomService
             'reply_to_message_id' => $data['reply_to_message_id'] ?? null,
         ]);
 
-        // Load the sender relationship
-        $message->load('sender');
+        // Load the sender and reply relationships for broadcasting
+        $message->load(['sender', 'replyTo.sender']);
 
         return $message;
     }
@@ -309,6 +309,53 @@ class ChatRoomService
                 'last_page' => $messages->lastPage(),
                 'from' => $messages->firstItem(),
                 'to' => $messages->lastItem(),
+            ]
+        ];
+    }
+
+    /**
+     * Get replies to a specific message.
+     *
+     * @param int $messageId
+     * @param User $user
+     * @param int $perPage
+     * @return array
+     * @throws \Exception When not authorized or message not found
+     */
+    public function getMessageReplies(int $messageId, User $user, int $perPage = 20): array
+    {
+        // Get the original message to verify access
+        $originalMessage = ChatMessage::with('chatRoom')->find($messageId);
+        
+        if (!$originalMessage) {
+            throw new \Exception('Message not found.');
+        }
+
+        // Check if user is a member of the chat room
+        $isMember = $originalMessage->chatRoom->users()
+            ->wherePivot('user_id', $user->id)
+            ->wherePivot('is_active', true)
+            ->exists();
+
+        if (!$isMember) {
+            throw new \Exception('You are not authorized to view replies for this message.');
+        }
+
+        // Get replies to this message
+        $replies = ChatMessage::where('reply_to_message_id', $messageId)
+            ->with(['sender', 'replyTo.sender'])
+            ->orderBy('created_at', 'asc')
+            ->paginate($perPage);
+
+        return [
+            'data' => $replies->items(),
+            'pagination' => [
+                'current_page' => $replies->currentPage(),
+                'per_page' => $replies->perPage(),
+                'total' => $replies->total(),
+                'last_page' => $replies->lastPage(),
+                'from' => $replies->firstItem(),
+                'to' => $replies->lastItem(),
             ]
         ];
     }

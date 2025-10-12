@@ -407,6 +407,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Chat Message Routes
     Route::post('/chat-rooms/{chatRoomId}/messages', [ChatMessageController::class, 'sendMessage']);
     Route::get('/chat-rooms/{chatRoomId}/messages', [ChatMessageController::class, 'getMessages']);
+    Route::get('/messages/{messageId}/replies', [ChatMessageController::class, 'getMessageReplies']);
     Route::put('/messages/{messageId}', [ChatMessageController::class, 'editMessage']);
     Route::delete('/messages/{messageId}', [ChatMessageController::class, 'deleteMessage']);
 

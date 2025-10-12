@@ -99,6 +99,38 @@ class ChatMessageController extends Controller
     }
 
     /**
+     * Get replies to a specific message.
+     *
+     * @param Request $request
+     * @param int $messageId
+     * @return JsonResponse
+     */
+    public function getMessageReplies(Request $request, int $messageId): JsonResponse
+    {
+        try {
+            $perPage = $request->get('per_page', 20);
+            $user = Auth::user();
+
+            $replies = $this->chatRoomService->getMessageReplies($messageId, $user, $perPage);
+
+            return ApiResponse::successWithPagination(
+                $replies['data'],
+                $replies['pagination'],
+                'Message replies retrieved successfully'
+            )->toJsonResponse();
+
+        } catch (\Exception $e) {
+            $statusCode = $e->getMessage() === 'Message not found.' ? 404 : 
+                         ($e->getMessage() === 'You are not authorized to view replies for this message.' ? 403 : 500);
+
+            return ApiResponse::error(
+                $e->getMessage(),
+                $statusCode
+            )->toJsonResponse();
+        }
+    }
+
+    /**
      * Edit a message.
      *
      * @param Request $request

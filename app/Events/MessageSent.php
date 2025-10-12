@@ -50,6 +50,27 @@ class MessageSent implements ShouldBroadcast
      */
     public function broadcastWith(): array
     {
+        $replyToMessage = null;
+        if ($this->message->reply_to_message_id) {
+            // Load the replyTo relationship if not already loaded
+            if (!$this->message->relationLoaded('replyTo')) {
+                $this->message->load(['replyTo.sender']);
+            }
+            
+            $replyTo = $this->message->replyTo;
+            if ($replyTo && $replyTo->relationLoaded('sender')) {
+                $replyToMessage = [
+                    'id' => $replyTo->id,
+                    'sender_id' => $replyTo->sender_id,
+                    'sender_name' => $replyTo->sender->name,
+                    'message' => $replyTo->message,
+                    'message_type' => $replyTo->message_type,
+                    'created_at' => $replyTo->created_at,
+                    'is_edited' => $replyTo->is_edited,
+                ];
+            }
+        }
+
         return [
             'message' => [
                 'id' => $this->message->id,
@@ -62,6 +83,7 @@ class MessageSent implements ShouldBroadcast
                 'message_type' => $this->message->message_type,
                 'chat_room_id' => $this->message->chat_room_id,
                 'reply_to_message_id' => $this->message->reply_to_message_id,
+                'reply_to_message' => $replyToMessage,
                 'is_edited' => $this->message->is_edited,
                 'edited_at' => $this->message->edited_at,
                 'created_at' => $this->message->created_at,
