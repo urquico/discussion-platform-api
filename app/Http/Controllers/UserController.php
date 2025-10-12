@@ -33,7 +33,7 @@ class UserController extends Controller
             $perPage = $request->get('per_page', 20);
             $search = $request->get('search');
 
-            // Get user IDs that the current user already has chat rooms with
+            // Get user IDs that the current user already has PRIVATE chat rooms with
             $existingChatUserIds = DB::table('chat_room_users')
                 ->where('chat_room_users.user_id', $currentUser->id)
                 ->where('chat_room_users.is_active', true)
@@ -41,11 +41,14 @@ class UserController extends Controller
                     $join->on('chat_room_users.chat_room_id', '=', 'other_users.chat_room_id')
                          ->whereRaw('other_users.user_id != chat_room_users.user_id');
                 })
+                ->join('chat_rooms', 'chat_room_users.chat_room_id', '=', 'chat_rooms.id')
+                ->where('chat_rooms.type', 'private') // Only exclude users from private chat rooms
+                ->where('chat_rooms.is_active', true)
                 ->pluck('other_users.user_id')
                 ->unique()
                 ->toArray();
 
-            // Build query to exclude current user and users with existing chat rooms
+            // Build query to exclude current user and users with existing private chat rooms
             $query = User::where('id', '!=', $currentUser->id)
                 ->whereNotIn('id', $existingChatUserIds);
 
@@ -100,7 +103,7 @@ class UserController extends Controller
             $currentUser = Auth::user();
             $limit = $request->get('limit', 10);
 
-            // Get user IDs that the current user already has chat rooms with
+            // Get user IDs that the current user already has PRIVATE chat rooms with
             $existingChatUserIds = DB::table('chat_room_users')
                 ->where('chat_room_users.user_id', $currentUser->id)
                 ->where('chat_room_users.is_active', true)
@@ -108,11 +111,14 @@ class UserController extends Controller
                     $join->on('chat_room_users.chat_room_id', '=', 'other_users.chat_room_id')
                          ->whereRaw('other_users.user_id != chat_room_users.user_id');
                 })
+                ->join('chat_rooms', 'chat_room_users.chat_room_id', '=', 'chat_rooms.id')
+                ->where('chat_rooms.type', 'private') // Only exclude users from private chat rooms
+                ->where('chat_rooms.is_active', true)
                 ->pluck('other_users.user_id')
                 ->unique()
                 ->toArray();
 
-            // For now, return recent users (excluding current user and existing chat partners)
+            // For now, return recent users (excluding current user and existing private chat partners)
             // Implement more sophisticated suggestions
             // based on mutual connections, shared interests, etc.
             $suggestedUsers = User::where('id', '!=', $currentUser->id)
@@ -159,7 +165,7 @@ class UserController extends Controller
                 )->toJsonResponse();
             }
 
-            // Get user IDs that the current user already has chat rooms with
+            // Get user IDs that the current user already has PRIVATE chat rooms with
             $existingChatUserIds = DB::table('chat_room_users')
                 ->where('chat_room_users.user_id', $currentUser->id)
                 ->where('chat_room_users.is_active', true)
@@ -167,6 +173,9 @@ class UserController extends Controller
                     $join->on('chat_room_users.chat_room_id', '=', 'other_users.chat_room_id')
                          ->whereRaw('other_users.user_id != chat_room_users.user_id');
                 })
+                ->join('chat_rooms', 'chat_room_users.chat_room_id', '=', 'chat_rooms.id')
+                ->where('chat_rooms.type', 'private') // Only exclude users from private chat rooms
+                ->where('chat_rooms.is_active', true)
                 ->pluck('other_users.user_id')
                 ->unique()
                 ->toArray();
