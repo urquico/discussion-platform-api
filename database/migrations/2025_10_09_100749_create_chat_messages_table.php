@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('sender_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('receiver_id')->nullable()->constrained('users')->onDelete('cascade');
             $table->text('message');
-            $table->foreignId('chat_room_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignId('chat_room_id')->nullable()->constrained('chat_rooms')->onDelete('cascade');
             $table->enum('message_type', ['text', 'image', 'file', 'system'])->default('text');
             $table->boolean('is_edited')->default(false);
             $table->timestamp('edited_at')->nullable();

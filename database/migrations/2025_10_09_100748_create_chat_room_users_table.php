@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('chat_room_users', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('chat_room_id')->constrained()->onDelete('cascade');
+            $table->foreignId('chat_room_id')->constrained('chat_rooms')->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->enum('role', ['admin', 'moderator', 'member'])->default('member');
             $table->boolean('is_active')->default(true);
