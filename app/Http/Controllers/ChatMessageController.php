@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\ChatRoomService;
+use App\Services\ChatRoomVisitService;
 use App\DTOs\ApiResponse;
 use App\Events\MessageSent;
 use App\Events\TypingIndicator;
@@ -15,7 +16,8 @@ use Illuminate\Validation\ValidationException;
 class ChatMessageController extends Controller
 {
     public function __construct(
-        private ChatRoomService $chatRoomService
+        private ChatRoomService $chatRoomService,
+        private ChatRoomVisitService $chatRoomVisitService
     ) {}
 
     /**
@@ -36,6 +38,9 @@ class ChatMessageController extends Controller
 
             $user = Auth::user();
             $message = $this->chatRoomService->sendMessage($chatRoomId, $user, $validated);
+
+            // Record the user's visit to this chat room
+            $this->chatRoomVisitService->recordVisit($user->id, $chatRoomId);
 
             // Broadcast the message to all users in the chat room
             broadcast(new MessageSent($message))->toOthers();
@@ -80,6 +85,9 @@ class ChatMessageController extends Controller
             $user = Auth::user();
 
             $messages = $this->chatRoomService->getChatRoomMessages($chatRoomId, $user, $perPage);
+
+            // Record the user's visit to this chat room
+            $this->chatRoomVisitService->recordVisit($user->id, $chatRoomId);
 
             return ApiResponse::successWithPagination(
                 $messages['data'],
@@ -285,6 +293,55 @@ class ChatMessageController extends Controller
             return ApiResponse::success(
                 ['message' => 'Typing indicator stopped'],
                 'Typing indicator stopped successfully'
+            )->toJsonResponse();
+
+        } catch (\Exception $e) {
+            return ApiResponse::error(
+                $e->getMessage(),
+                500
+            )->toJsonResponse();
+        }
+    }
+
+    /**
+     * Record when a user leaves a chat room.
+     *
+     * @param Request $request
+     * @param int $chatRoomId
+     * @return JsonResponse
+     */
+    public function leaveChatRoom(Request $request, int $chatRoomId): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            
+            // Verify user is a member of the chat room
+            $chatRoom = \App\Models\ChatRoom::find($chatRoomId);
+            if (!$chatRoom) {
+                return ApiResponse::error('Chat room not found.', 404)->toJsonResponse();
+            }
+
+            $isMember = $chatRoom->users()
+                ->wherePivot('user_id', $user->id)
+                ->wherePivot('is_active', true)
+                ->exists();
+
+            if (!$isMember) {
+                return ApiResponse::error('You are not authorized to access this chat room.', 403)->toJsonResponse();
+            }
+
+            // Record the user's visit (exit time) to this chat room
+            // Note: We only record the exit for the leaving user, not for others
+            $this->chatRoomVisitService->recordVisit($user->id, $chatRoomId);
+
+            return ApiResponse::success(
+                [
+                    'message' => 'Chat room exit recorded',
+                    'user_id' => $user->id,
+                    'chat_room_id' => $chatRoomId,
+                    'exited_at' => now()->toISOString()
+                ],
+                'Chat room exit recorded successfully'
             )->toJsonResponse();
 
         } catch (\Exception $e) {

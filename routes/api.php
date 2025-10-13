@@ -94,6 +94,7 @@ Route::get('/', function () {
                 'POST /chat-rooms/{id}/users' => 'Add users to chat room [AUTH]',
                 'POST /chat-rooms/{chatRoomId}/messages' => 'Send message to chat room [AUTH]',
                 'GET /chat-rooms/{chatRoomId}/messages' => 'Get chat room messages (?per_page=50) [AUTH]',
+                'POST /chat-rooms/{chatRoomId}/leave' => 'Record user exit from chat room [AUTH]',
                 'PUT /messages/{messageId}' => 'Edit message [AUTH]',
                 'DELETE /messages/{messageId}' => 'Delete message [AUTH]'
             ],
@@ -327,6 +328,11 @@ Route::get('/', function () {
                     'url' => 'GET /api/chat-rooms/1/users/online',
                     'headers' => ['Authorization' => 'Bearer {token}'],
                     'description' => 'Get online users for specific chat room'
+                ],
+                'leave_chat_room' => [
+                    'url' => 'POST /api/chat-rooms/1/leave',
+                    'headers' => ['Authorization' => 'Bearer {token}'],
+                    'description' => 'Record user exit from chat room'
                 ]
             ]
         ],
@@ -415,6 +421,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Typing Indicator Routes
     Route::post('/chat-rooms/{chatRoomId}/typing', [ChatMessageController::class, 'startTyping']);
     Route::delete('/chat-rooms/{chatRoomId}/typing', [ChatMessageController::class, 'stopTyping']);
+
+    // Chat Room Visit Tracking Routes
+    Route::post('/chat-rooms/{chatRoomId}/leave', [ChatMessageController::class, 'leaveChatRoom']);
 
     // Message Reaction Routes
     Route::post('/messages/{messageId}/reactions', [MessageReactionController::class, 'addReaction']);

@@ -41,19 +41,20 @@ class DatabaseSeeder extends Seeder
         // Create admin user first
         $adminUser = User::create([
             'name' => 'Admin',
-            'email' => 'admin@discussionplatform.com',
+            'email' => 'admin@gmail.com',
             'email_verified_at' => now(),
-            'password' => bcrypt('4dm!N'), // Change this in production!
+            'password' => bcrypt('password'), // Change this in production!
             'is_admin' => true,
         ]);
 
         // Create regular users
-        $usersData = User::factory()->count(5)->make()->map(function ($user) {
+        $usersData = User::factory()->count(100)->make()->map(function ($user, $index) {
             return [
                 'name' => $user->name,
-                'email' => $user->email,
+                // the email is {n}@gmail.com where n is 1,2,3,4,5
+                'email' => ($index + 1) . '@gmail.com',
                 'email_verified_at' => $user->email_verified_at ? $user->email_verified_at->format('Y-m-d H:i:s') : null,
-                'password' => $user->password,
+                'password' => bcrypt('password'),
                 'remember_token' => $user->remember_token,
                 'is_admin' => false, // Regular users are not admin
                 'created_at' => now(),
