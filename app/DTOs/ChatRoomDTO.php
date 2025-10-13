@@ -18,10 +18,10 @@ class ChatRoomDTO
         public readonly string $updated_at,
         public readonly ?UserDTO $creator = null,
         public readonly ?array $users = null,
-        public readonly ?int $unread_count = null,
         public readonly ?string $last_message = null,
         public readonly ?string $last_message_at = null,
         public readonly ?UserDTO $other_user = null,
+        public readonly bool $has_unread_messages = false,
     ) {}
 
     public static function fromModel(ChatRoom $chatRoom, ?User $currentUser = null): self
@@ -74,6 +74,27 @@ class ChatRoomDTO
             $otherUser = $otherUser ? UserDTO::fromModel($otherUser) : null;
         }
 
+        // Determine if there are unread messages
+        $hasUnreadMessages = false;
+        if ($currentUser && $lastMessageAt) {
+            // Get the user's last visit time for this chat room
+            $lastVisit = \App\Models\ChatRoomVisit::where('user_id', $currentUser->id)
+                ->where('chat_room_id', $chatRoom->id)
+                ->first();
+            
+            if ($lastVisit) {
+                // Compare last message time with last visit time
+                $lastMessageTime = \Carbon\Carbon::parse($lastMessageAt);
+                $lastVisitTime = $lastVisit->last_visited_at;
+                
+                // If last message is newer than last visit, there are unread messages
+                $hasUnreadMessages = $lastMessageTime->isAfter($lastVisitTime);
+            } else {
+                // If no visit record exists, assume there are unread messages
+                $hasUnreadMessages = true;
+            }
+        }
+
         return new self(
             id: $chatRoom->id,
             name: $chatRoom->name,
@@ -90,6 +111,7 @@ class ChatRoomDTO
             last_message: $lastMessage,
             last_message_at: $lastMessageAt,
             other_user: $otherUser,
+            has_unread_messages: $hasUnreadMessages,
         );
     }
 
@@ -106,10 +128,10 @@ class ChatRoomDTO
             'updated_at' => $this->updated_at,
             'creator' => $this->creator?->toArray(),
             'users' => $this->users,
-            'unread_count' => $this->unread_count,
             'last_message' => $this->last_message,
             'last_message_at' => $this->last_message_at,
             'other_user' => $this->other_user?->toArray(),
+            'has_unread_messages' => $this->has_unread_messages,
         ];
     }
 

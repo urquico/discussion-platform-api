@@ -66,6 +66,41 @@ class ChatRoomUpdated implements ShouldBroadcast
      */
     public function broadcastWith(): array
     {
+        $latestMessage = $this->chatRoom->messages()->latest()->first();
+        $latestMessageAt = $latestMessage ? $latestMessage->created_at : null;
+        
+        // For message_sent events, recipients should have unread messages
+        // since they haven't seen the new message yet
+        $hasUnreadMessages = false;
+        
+        if ($latestMessageAt && $this->action === 'message_sent') {
+            // For message_sent events, recipients should have unread messages
+            // The sender won't receive this event due to .toOthers()
+            $hasUnreadMessages = true;
+        } else {
+            // For other events, calculate based on visit record
+            $senderId = auth()->id();
+            if ($senderId) {
+                $lastVisit = \App\Models\ChatRoomVisit::where('user_id', $senderId)
+                    ->where('chat_room_id', $this->chatRoom->id)
+                    ->first();
+                
+                if ($lastVisit) {
+                    // Ensure we have proper Carbon instances for comparison
+                    $lastMessageTime = $latestMessageAt instanceof \Carbon\Carbon 
+                        ? $latestMessageAt 
+                        : \Carbon\Carbon::parse($latestMessageAt);
+                    $lastVisitTime = $lastVisit->last_visited_at;
+                    
+                    // If last message is newer than last visit, there are unread messages
+                    $hasUnreadMessages = $lastMessageTime->isAfter($lastVisitTime);
+                } else {
+                    // If no visit record exists, assume there are unread messages
+                    $hasUnreadMessages = true;
+                }
+            }
+        }
+
         return [
             'chat_room' => [
                 'id' => $this->chatRoom->id,
@@ -75,25 +110,15 @@ class ChatRoomUpdated implements ShouldBroadcast
                 'creator_id' => $this->chatRoom->creator_id,
                 'created_at' => $this->chatRoom->created_at,
                 'updated_at' => $this->chatRoom->updated_at,
-                'latest_message' => $this->chatRoom->messages()
-                    ->latest()
-                    ->first() ? [
-                        'id' => $this->chatRoom->messages()->latest()->first()->id,
-                        'sender_id' => $this->chatRoom->messages()->latest()->first()->sender_id,
-                        'sender_name' => $this->chatRoom->messages()->latest()->first()->sender->name,
-                        'message' => $this->chatRoom->messages()->latest()->first()->message,
-                        'message_type' => $this->chatRoom->messages()->latest()->first()->message_type,
-                        'created_at' => $this->chatRoom->messages()->latest()->first()->created_at,
-                    ] : null,
-                'unread_count' => $this->chatRoom->messages()
-                    ->where('created_at', '>', $this->chatRoom->users()
-                        ->wherePivot('user_id', auth()->id())
-                        ->wherePivot('is_active', true)
-                        ->first()
-                        ->pivot
-                        ->last_read_at ?? $this->chatRoom->created_at)
-                    ->where('sender_id', '!=', auth()->id())
-                    ->count(),
+                'latest_message' => $latestMessage ? [
+                    'id' => $latestMessage->id,
+                    'sender_id' => $latestMessage->sender_id,
+                    'sender_name' => $latestMessage->sender->name,
+                    'message' => $latestMessage->message,
+                    'message_type' => $latestMessage->message_type,
+                    'created_at' => $latestMessage->created_at,
+                ] : null,
+                'has_unread_messages' => $hasUnreadMessages,
                 'members_count' => $this->chatRoom->users()
                     ->wherePivot('is_active', true)
                     ->count(),
