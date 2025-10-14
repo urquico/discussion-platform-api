@@ -10,6 +10,7 @@ use App\DTOs\ReplyDTO;
 use App\DTOs\NestedReplyDTO;
 use App\DTOs\ThreadDTO;
 use Illuminate\Http\Request;
+use App\Services\NotificationService;
 
 /**
  * Comment Management Service
@@ -40,6 +41,13 @@ use Illuminate\Http\Request;
  */
 class CommentService
 {
+    protected NotificationService $notificationService;
+
+    public function __construct(NotificationService $notificationService)
+    {
+        $this->notificationService = $notificationService;
+    }
+
     /**
      * Get comments for a thread with reply structure and smart highlighting.
      *
@@ -145,6 +153,9 @@ class CommentService
         $comment->downvotes = $downvotes;
         $comment->vote_score = $upvotes - $downvotes;
         $comment->replies_count = $repliesCount;
+
+        // Create notification for thread owner if commenter is not the thread author
+        $this->createCommentNotification($thread, $user, $comment);
 
         return CommentDTO::fromModel($comment, []);
     }
@@ -265,6 +276,9 @@ class CommentService
         $upvotes = $reply->votes()->where('type', 'upvote')->count();
         $downvotes = $reply->votes()->where('type', 'downvote')->count();
 
+        // Create notification for comment author if replier is not the comment author
+        $this->createReplyNotification($targetComment, $user, $reply);
+
         return ReplyDTO::fromArray([
             'id' => $reply->id,
             'thread_id' => $reply->thread_id,
@@ -308,6 +322,9 @@ class CommentService
 
         $upvotes = $reply->votes()->where('type', 'upvote')->count();
         $downvotes = $reply->votes()->where('type', 'downvote')->count();
+
+        // Create notification for reply author if replier is not the reply author
+        $this->createReplyNotification($targetReply, $user, $reply);
 
         return NestedReplyDTO::fromArray([
             'id' => $reply->id,
@@ -747,5 +764,66 @@ class CommentService
             'created_at' => $nestedReply->created_at,
             'updated_at' => $nestedReply->updated_at,
         ];
+    }
+
+    /**
+     * Create a notification for reply creation.
+     *
+     * @param Comment $targetComment
+     * @param User $replier
+     * @param Comment $reply
+     * @return void
+     */
+    private function createReplyNotification(Comment $targetComment, User $replier, Comment $reply): void
+    {
+        // Don't notify if the replier is the target comment author
+        if ($replier->name === $targetComment->author) {
+            return;
+        }
+
+        // Find the target comment author user
+        $targetCommentAuthor = User::where('name', $targetComment->author)->first();
+        if (!$targetCommentAuthor) {
+            return;
+        }
+
+        // Create reply notification
+        $this->notificationService->createReplyNotification(
+            $targetCommentAuthor,
+            $replier,
+            $targetComment->body,
+            $targetComment->id,
+            $targetComment->thread_id
+        );
+    }
+
+    /**
+     * Create a notification for comment creation.
+     *
+     * @param Thread $thread
+     * @param User $commenter
+     * @param Comment $comment
+     * @return void
+     */
+    private function createCommentNotification(Thread $thread, User $commenter, Comment $comment): void
+    {
+        // Don't notify if the commenter is the thread author
+        if ($commenter->name === $thread->author) {
+            return;
+        }
+
+        // Find the thread author user
+        $threadAuthor = User::where('name', $thread->author)->first();
+        if (!$threadAuthor) {
+            return;
+        }
+
+        // Create comment notification
+        $this->notificationService->createCommentNotification(
+            $threadAuthor,
+            $commenter,
+            $thread->title,
+            $thread->id
+        );
     }
 }

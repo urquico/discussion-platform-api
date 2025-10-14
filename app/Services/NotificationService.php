@@ -29,45 +29,66 @@ class NotificationService
     }
 
     /**
+     * Create a reply notification.
+     */
+    public function createReplyNotification(User $recipient, User $replier, string $commentBody, int $commentId, int $threadId): Notification
+    {
+        // Truncate comment body for display
+        $truncatedComment = strlen($commentBody) > 50 ? substr($commentBody, 0, 50) . '...' : $commentBody;
+        
+        return $recipient->createNotification(
+            'reply',
+            'New Reply',
+            "{$replier->name} replied to your comment: \"{$truncatedComment}\"",
+            [
+                'replier_id' => $replier->id,
+                'replier_name' => $replier->name,
+                'comment_id' => $commentId,
+                'comment_body' => $commentBody,
+                'thread_id' => $threadId,
+            ],
+            "/threads/{$threadId}",
+            'reply-icon',
+            $replier->id
+        );
+    }
+
+    /**
      * Create a vote notification.
      */
-    public function createVoteNotification(User $recipient, User $voter, string $contentType, string $contentTitle, int $contentId): Notification
+    public function createVoteNotification(User $recipient, User $voter, string $contentType, string $contentTitle, int $contentId, string $voteType = 'upvote'): Notification
     {
+        // Determine vote action text and icon
+        $voteAction = $voteType === 'upvote' ? 'liked' : 'disliked';
+        $voteEmoji = $voteType === 'upvote' ? '👍' : '👎';
+        $voteIcon = $voteType === 'upvote' ? 'thumbs-up-icon' : 'thumbs-down-icon';
+        
+        // Determine action URL based on content type
+        $actionUrl = "/{$contentType}s/{$contentId}";
+        if ($contentType === 'review') {
+            // For review votes, navigate to the associated protocol
+            $review = \App\Models\Review::find($contentId);
+            if ($review && $review->protocol_id) {
+                $actionUrl = "/protocols/{$review->protocol_id}";
+            }
+        }
+        
         return $recipient->createNotification(
             'vote',
-            'New Vote',
-            "{$voter->name} voted on your {$contentType}: \"{$contentTitle}\"",
+            "New {$voteAction}",
+            "{$voteEmoji} {$voter->name} {$voteAction} your {$contentType}: \"{$contentTitle}\"",
             [
                 'voter_id' => $voter->id,
                 'voter_name' => $voter->name,
                 'content_type' => $contentType,
                 'content_id' => $contentId,
                 'content_title' => $contentTitle,
+                'vote_type' => $voteType,
+                'vote_action' => $voteAction,
             ],
-            "/{$contentType}s/{$contentId}",
-            'vote-icon',
+            $actionUrl,
+            $voteIcon,
             $voter->id
-        );
-    }
-
-    /**
-     * Create a mention notification.
-     */
-    public function createMentionNotification(User $recipient, User $mentioner, string $context, int $contextId): Notification
-    {
-        return $recipient->createNotification(
-            'mention',
-            'You were mentioned',
-            "{$mentioner->name} mentioned you in a comment",
-            [
-                'mentioner_id' => $mentioner->id,
-                'mentioner_name' => $mentioner->name,
-                'context' => $context,
-                'context_id' => $contextId,
-            ],
-            "/{$context}s/{$contextId}",
-            'mention-icon',
-            $mentioner->id
         );
     }
 

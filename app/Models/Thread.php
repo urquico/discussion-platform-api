@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Laravel\Scout\Searchable;
 
 /**
  * @property int $id
@@ -26,7 +25,7 @@ use Laravel\Scout\Searchable;
  */
 class Thread extends Model
 {
-    use HasFactory, Searchable;
+    use HasFactory;
 
     /**
      * The attributes that are mass assignable.
@@ -45,36 +44,6 @@ class Thread extends Model
         // Removed upvotes, downvotes, vote_score to prevent N+1 queries
         // These are now handled via withCount in services
     ];
-
-
-    /**
-     * Get the index name for the model used by Laravel Scout.
-     *
-     * @return string
-     */
-    public function searchableAs(): string
-    {
-        return 'threads_index';
-    }
-
-
-    /**
-     * Get the array representation of the model for search indexing.
-     *
-     * @return array
-     */
-    public function toSearchableArray(): array
-    {
-        return [
-            'id' => (string) $this->id,
-            'title' => $this->title,
-            'body' => $this->body,
-            'protocol_id' => (string) $this->protocol_id,
-            'author' => $this->author,
-            'vote_score' => $this->vote_score,
-            'created_at' => $this->created_at->timestamp,
-        ];
-    }
 
 
     /**

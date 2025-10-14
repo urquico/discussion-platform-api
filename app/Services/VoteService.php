@@ -8,6 +8,7 @@ use App\Models\Review;
 use App\Models\Vote;
 use App\Models\User;
 use App\DTOs\VoteDTO;
+use App\Services\NotificationService;
 
 /**
  * Vote Service
@@ -21,7 +22,7 @@ use App\DTOs\VoteDTO;
  * - Aggregates and returns vote statistics
  *
  * @package App\Services
- * @author Christian Bangay
+ * @author Christian Bangay & Kurt Jacob Urquico
  * @version 1.0.0
  * @since 2025-07-31
  *
@@ -34,6 +35,12 @@ use App\DTOs\VoteDTO;
  */
 class VoteService
 {
+    protected NotificationService $notificationService;
+
+    public function __construct(NotificationService $notificationService)
+    {
+        $this->notificationService = $notificationService;
+    }
     /**
      * Vote on a thread.
      *
@@ -62,6 +69,9 @@ class VoteService
                 $existingVote->update(['type' => $type]);
                 $message = 'Vote updated successfully';
                 $vote = VoteDTO::fromModel($existingVote);
+                
+                // Create notification for vote change
+                $this->createVoteNotification($thread, $user, $type);
             }
         } else {
             // Create new vote
@@ -71,6 +81,9 @@ class VoteService
             ]);
             $message = 'Voted successfully';
             $vote = VoteDTO::fromModel($newVote);
+            
+            // Create notification for new vote
+            $this->createVoteNotification($thread, $user, $type);
         }
 
         // Load votes with the thread to calculate counts efficiently
@@ -127,6 +140,9 @@ class VoteService
                 $existingVote->update(['type' => $type]);
                 $message = 'Vote updated successfully';
                 $vote = VoteDTO::fromModel($existingVote);
+                
+                // Create notification for vote change
+                $this->createCommentVoteNotification($comment, $user, $type);
             }
         } else {
             // Create new vote
@@ -136,6 +152,9 @@ class VoteService
             ]);
             $message = 'Voted successfully';
             $vote = VoteDTO::fromModel($newVote);
+            
+            // Create notification for new vote
+            $this->createCommentVoteNotification($comment, $user, $type);
         }
 
         // Load votes with the comment to calculate counts efficiently
@@ -191,6 +210,9 @@ class VoteService
                 // User is changing their vote
                 $existingVote->update(['type' => $type]);
                 $message = 'Vote updated successfully';
+                
+                // Create notification for vote change
+                $this->createReviewVoteNotification($review, $user, $type);
             }
         } else {
             // Create new vote
@@ -201,6 +223,9 @@ class VoteService
                 'type' => $type,
             ]);
             $message = 'Vote recorded successfully';
+            
+            // Create notification for new vote
+            $this->createReviewVoteNotification($review, $user, $type);
         }
 
         // Refresh the review to get updated counts
@@ -214,5 +239,101 @@ class VoteService
                 'user_vote' => $review->hasUserVotedHelpful($user->id) ? 'helpful' : ($review->hasUserVotedNotHelpful($user->id) ? 'not_helpful' : null),
             ]
         ];
+    }
+
+    /**
+     * Create a notification for thread voting.
+     *
+     * @param Thread $thread
+     * @param User $voter
+     * @param string $voteType
+     * @return void
+     */
+    private function createVoteNotification(Thread $thread, User $voter, string $voteType): void
+    {
+        // Don't notify if the voter is the thread author
+        if ($voter->name === $thread->author) {
+            return;
+        }
+
+        // Find the thread author user
+        $threadAuthor = User::where('name', $thread->author)->first();
+        if (!$threadAuthor) {
+            return;
+        }
+
+        // Create vote notification
+        $this->notificationService->createVoteNotification(
+            $threadAuthor,
+            $voter,
+            'thread',
+            $thread->title,
+            $thread->id,
+            $voteType
+        );
+    }
+
+    /**
+     * Create a notification for comment voting.
+     *
+     * @param Comment $comment
+     * @param User $voter
+     * @param string $voteType
+     * @return void
+     */
+    private function createCommentVoteNotification(Comment $comment, User $voter, string $voteType): void
+    {
+        // Don't notify if the voter is the comment author
+        if ($voter->name === $comment->author) {
+            return;
+        }
+
+        // Find the comment author user
+        $commentAuthor = User::where('name', $comment->author)->first();
+        if (!$commentAuthor) {
+            return;
+        }
+
+        // Create vote notification for comment
+        $this->notificationService->createVoteNotification(
+            $commentAuthor,
+            $voter,
+            'comment',
+            $comment->body,
+            $comment->id,
+            $voteType
+        );
+    }
+
+    /**
+     * Create a notification for review voting.
+     *
+     * @param Review $review
+     * @param User $voter
+     * @param string $voteType
+     * @return void
+     */
+    private function createReviewVoteNotification(Review $review, User $voter, string $voteType): void
+    {
+        // Don't notify if the voter is the review author
+        if ($voter->name === $review->author) {
+            return;
+        }
+
+        // Find the review author user
+        $reviewAuthor = User::where('name', $review->author)->first();
+        if (!$reviewAuthor) {
+            return;
+        }
+
+        // Create vote notification for review
+        $this->notificationService->createVoteNotification(
+            $reviewAuthor,
+            $voter,
+            'review',
+            $review->feedback ?? "Review #{$review->id}",
+            $review->id,
+            $voteType
+        );
     }
 }

@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Laravel\Scout\Searchable;
 
 /**
  * @property int $id
@@ -25,7 +24,7 @@ use Laravel\Scout\Searchable;
  */
 class Protocol extends Model
 {
-    use HasFactory, Searchable;
+    use HasFactory;
 
     /**
      * The attributes that are mass assignable.
@@ -45,38 +44,6 @@ class Protocol extends Model
         'tags' => 'array',
         'rating' => 'float',
     ];
-
-
-    /**
-     * Get the index name for the model used by Laravel Scout.
-     *
-     * @return string
-     */
-    public function searchableAs(): string
-    {
-        return 'protocols_index';
-    }
-
-
-    /**
-     * Get the array representation of the model for search indexing.
-     *
-     * @return array
-     */
-    public function toSearchableArray(): array
-    {
-        return [
-            'id' => (string) $this->id,
-            'title' => $this->title,
-            'content' => $this->content,
-            'tags' => is_array($this->tags) ? implode(' ', $this->tags) : (string) $this->tags,
-            'author' => $this->author,
-            'rating' => (float) $this->rating,
-            'reviews_count' => $this->reviews_count ?? $this->reviews()->count(),
-            'threads_count' => $this->threads_count ?? $this->threads()->count(),
-            'created_at' => $this->created_at?->timestamp ?? time(),
-        ];
-    }
 
 
     /**
