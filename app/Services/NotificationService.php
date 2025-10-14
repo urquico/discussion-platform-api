@@ -114,6 +114,9 @@ class NotificationService
             // Update the notification to refresh the timestamp and trigger broadcast
             $existingNotification->touch(); // This updates the updated_at timestamp
 
+            // Load the sender relationship before broadcasting
+            $existingNotification->load('sender');
+
             // manually broadcast the notification event since touch doesn't trigger it
             broadcast(new \App\Events\NotificationSent($existingNotification, $existingNotification->user));
             

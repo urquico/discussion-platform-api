@@ -47,7 +47,7 @@ class NotificationSent implements ShouldBroadcast
      */
     public function broadcastWith(): array
     {
-        return [
+        $data = [
             'id' => $this->notification->id,
             'type' => $this->notification->type,
             'title' => $this->notification->title,
@@ -66,6 +66,17 @@ class NotificationSent implements ShouldBroadcast
                 'avatar' => $this->notification->sender->avatar,
             ] : null,
         ];
+
+        // Debug logging
+        \Log::info('Broadcasting notification data', [
+            'notification_id' => $this->notification->id,
+            'user_id' => $this->user->id,
+            'updated_at' => $this->notification->updated_at,
+            'time_ago' => $this->notification->time_ago,
+            'sender_loaded' => $this->notification->relationLoaded('sender')
+        ]);
+
+        return $data;
     }
 
     /**

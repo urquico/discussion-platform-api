@@ -18,7 +18,7 @@ class NotificationController extends Controller
         $type = $request->get('type');
         $unreadOnly = $request->boolean('unread_only', false);
 
-        $query = $user->notifications()->orderBy('created_at', 'desc');
+        $query = $user->notifications()->orderBy('updated_at', 'desc');
 
         if ($type) {
             $query->ofType($type);

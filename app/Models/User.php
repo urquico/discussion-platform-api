@@ -292,7 +292,7 @@ class User extends Authenticatable
     public function getRecentNotifications(int $limit = 10)
     {
         return $this->notifications()
-            ->orderBy('created_at', 'desc')
+            ->orderBy('updated_at', 'desc')
             ->limit($limit)
             ->get();
     }

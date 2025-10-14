@@ -117,11 +117,11 @@ class Notification extends Model
     }
 
     /**
-     * Get the time elapsed since the notification was created.
+     * Get the time elapsed since the notification was last updated.
      */
     public function getTimeAgoAttribute(): string
     {
-        return $this->created_at->diffForHumans();
+        return $this->updated_at->diffForHumans();
     }
 
     /**
