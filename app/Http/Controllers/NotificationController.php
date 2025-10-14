@@ -17,6 +17,7 @@ class NotificationController extends Controller
         $perPage = $request->get('per_page', 15);
         $type = $request->get('type');
         $unreadOnly = $request->boolean('unread_only', false);
+        $readOnly = $request->boolean('read_only', false);
 
         $query = $user->notifications()->orderBy('updated_at', 'desc');
 
@@ -26,6 +27,8 @@ class NotificationController extends Controller
 
         if ($unreadOnly) {
             $query->unread();
+        } elseif ($readOnly) {
+            $query->read();
         }
 
         $notifications = $query->paginate($perPage);

@@ -113,7 +113,7 @@ Route::get('/', function () {
                 'GET /chat-rooms/{chatRoomId}/users/online' => 'Get online users for specific chat room [AUTH]'
             ],
             'notifications' => [
-                'GET /notifications' => 'Get user notifications (?per_page=15&type=comment&unread_only=true) [AUTH]',
+                'GET /notifications' => 'Get user notifications (?per_page=15&type=comment&unread_only=true&read_only=true) [AUTH]',
                 'GET /notifications/unread-count' => 'Get unread notifications count [AUTH]',
                 'GET /notifications/recent' => 'Get recent notifications (?limit=10) [AUTH]',
                 'GET /notifications/stats' => 'Get notification statistics [AUTH]',
