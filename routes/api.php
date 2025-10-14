@@ -16,6 +16,7 @@ use App\Http\Controllers\ChatRoomController;
 use App\Http\Controllers\ChatMessageController;
 use App\Http\Controllers\MessageReactionController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\NotificationController;
 
 // API Documentation
 Route::get('/', function () {
@@ -110,6 +111,17 @@ Route::get('/', function () {
                 'GET /users/{userId}/status' => 'Check specific user online status [AUTH]',
                 'GET /users/online' => 'Get all online users [AUTH]',
                 'GET /chat-rooms/{chatRoomId}/users/online' => 'Get online users for specific chat room [AUTH]'
+            ],
+            'notifications' => [
+                'GET /notifications' => 'Get user notifications (?per_page=15&type=comment&unread_only=true) [AUTH]',
+                'GET /notifications/unread-count' => 'Get unread notifications count [AUTH]',
+                'GET /notifications/recent' => 'Get recent notifications (?limit=10) [AUTH]',
+                'GET /notifications/stats' => 'Get notification statistics [AUTH]',
+                'PATCH /notifications/{id}/read' => 'Mark notification as read [AUTH]',
+                'PATCH /notifications/{id}/unread' => 'Mark notification as unread [AUTH]',
+                'PATCH /notifications/mark-all-read' => 'Mark all notifications as read [AUTH]',
+                'DELETE /notifications/{id}' => 'Delete specific notification [AUTH]',
+                'DELETE /notifications' => 'Delete all notifications [AUTH]'
             ]
         ],
         'sample_requests' => [
@@ -442,6 +454,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/{userId}/status', [UserController::class, 'checkUserOnlineStatus']);
     Route::get('/users/online', [UserController::class, 'getAllOnlineUsers']);
     Route::get('/chat-rooms/{chatRoomId}/users/online', [UserController::class, 'getOnlineUsersForChatRoom']);
+
+    // Notification Routes
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::get('/notifications/recent', [NotificationController::class, 'recent']);
+    Route::get('/notifications/stats', [NotificationController::class, 'stats']);
+    Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::patch('/notifications/{id}/unread', [NotificationController::class, 'markAsUnread']);
+    Route::patch('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+    Route::delete('/notifications', [NotificationController::class, 'destroyAll']);
 });
 
 // Public Routes (read-only, no authentication required)

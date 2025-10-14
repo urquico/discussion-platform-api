@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\ChatRoomService;
 use App\Services\ChatRoomVisitService;
+use App\Services\NotificationService;
 use App\DTOs\ApiResponse;
 use App\Events\MessageSent;
 use App\Events\TypingIndicator;
@@ -17,7 +18,8 @@ class ChatMessageController extends Controller
 {
     public function __construct(
         private ChatRoomService $chatRoomService,
-        private ChatRoomVisitService $chatRoomVisitService
+        private ChatRoomVisitService $chatRoomVisitService,
+        private NotificationService $notificationService
     ) {}
 
     /**
@@ -41,6 +43,19 @@ class ChatMessageController extends Controller
 
             // Record the user's visit to this chat room
             $this->chatRoomVisitService->recordVisit($user->id, $chatRoomId);
+
+            // Create notifications for all active members except the sender
+            $activeMembers = $message->chatRoom->activeUsers()->get();
+            foreach ($activeMembers as $member) {
+                if ($member->id !== $user->id) {
+                    $this->notificationService->createChatNotification(
+                        $member,
+                        $user,
+                        $message->chatRoom->name ?? '',
+                        $chatRoomId
+                    );
+                }
+            }
 
             // Broadcast the message to all users in the chat room
             broadcast(new MessageSent($message))->toOthers();
@@ -154,6 +169,19 @@ class ChatMessageController extends Controller
 
             $user = Auth::user();
             $message = $this->chatRoomService->editMessage($messageId, $user, $validated['message']);
+
+            // Create notifications for all active members except the editor
+            $activeMembers = $message->chatRoom->activeUsers()->get();
+            foreach ($activeMembers as $member) {
+                if ($member->id !== $user->id) {
+                    $this->notificationService->createChatNotification(
+                        $member,
+                        $user,
+                        $message->chatRoom->name ?? 'Chat Room',
+                        $message->chatRoom->id
+                    );
+                }
+            }
 
             // Broadcast the edited message
             broadcast(new MessageSent($message, 'edited'))->toOthers();

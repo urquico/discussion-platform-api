@@ -269,4 +269,63 @@ class User extends Authenticatable
 
         return 'offline';
     }
+
+    /**
+     * Get the notifications for the user.
+     */
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    /**
+     * Get unread notifications count.
+     */
+    public function getUnreadNotificationsCount(): int
+    {
+        return $this->notifications()->unread()->count();
+    }
+
+    /**
+     * Get recent notifications (last 10).
+     */
+    public function getRecentNotifications(int $limit = 10)
+    {
+        return $this->notifications()
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Mark all notifications as read.
+     */
+    public function markAllNotificationsAsRead(): int
+    {
+        return Notification::markAllAsReadForUser($this->id);
+    }
+
+    /**
+     * Create a notification for this user.
+     */
+    public function createNotification(
+        string $type,
+        string $title,
+        string $message,
+        ?array $data = null,
+        ?string $actionUrl = null,
+        ?string $icon = null,
+        ?int $senderId = null
+    ): Notification {
+        return Notification::createForUser(
+            $this->id,
+            $type,
+            $title,
+            $message,
+            $data,
+            $actionUrl,
+            $icon,
+            $senderId
+        );
+    }
 }

@@ -25,3 +25,8 @@ Broadcast::channel('user-status', function ($user) {
     // Allow all authenticated users to listen to user status changes
     return true;
 });
+
+Broadcast::channel('notifications.{userId}', function ($user, $userId) {
+    // Users can only listen to their own notifications
+    return (int) $user->id === (int) $userId;
+});
